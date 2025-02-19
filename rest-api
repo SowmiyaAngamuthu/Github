@@ -1,0 +1,47 @@
+#### To automate branch creation #######
+#!/bin/bash
+
+# set -x ---- to debug
+
+# Set your GitHub token
+GITHUB_TOKEN="git_hub token"
+GITHUB_USER="git_hub username"
+
+# Get repository names and store in an array
+REPOS=$(curl -s -H "Accept: application/vnd.github.v3+json" \
+               -H "Authorization: Bearer $GITHUB_TOKEN" \
+               "https://api.github.com/user/repos?per_page=100" | jq -r '.[].name' | tr -d '\r' )
+
+echo "List of Repos:"
+echo "===================================="
+echo "$REPOS"
+echo "===================================="
+
+# REPOS=Github
+
+# Loop through each repository
+for REPO in $REPOS ; do
+    echo "Processing repo: $REPO"
+
+echo $REPO
+
+    # Get default branch (usually 'main' or 'master')
+    DEFAULT_BRANCH=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+                           "https://api.github.com/repos/$GITHUB_USER/$REPO" | jq -r '.default_branch')
+
+echo "default branch:$DEFAULT_BRANCH"
+
+# Get the latest commit SHA of the default branch
+    LATEST_COMMIT_SHA=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+                              "https://api.github.com/repos/$GITHUB_USER/$REPO/git/ref/heads/main" | jq -r '.object.sha')
+
+echo "latest_commit_sha:$LATEST_COMMIT_SHA"
+
+# Create the new branch 'dev-test' from the default branch
+    curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
+         -H "Accept: application/vnd.github.v3+json" \
+         -d "{\"ref\": \"refs/heads/dev-testing\", \"sha\": \"$LATEST_COMMIT_SHA\"}" \
+         "https://api.github.com/repos/$GITHUB_USER/$REPO/git/refs"
+
+ echo "Branch 'dev-test' created in $REPO"
+done
